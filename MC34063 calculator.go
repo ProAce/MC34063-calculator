@@ -16,10 +16,13 @@ func main() {
 	var check string
 
 	for retry == true {
+		//Start a reader from the terminal
 		reader := bufio.NewReader(os.Stdin)
 
+		//Enter and parse all the variables
 		fmt.Print("Enter Vin (V): ")
 		input, _ := reader.ReadString('\n')
+		//Check wether it is a Unix or a Windows terminal
 		if strings.HasSuffix(input, "\r\n") {
 			check = "\r\n"
 		} else {
@@ -28,43 +31,26 @@ func main() {
 		input = strings.TrimSuffix(input, check)
 		vin, _ = strconv.ParseFloat(input, 64)
 
-		fmt.Print("Enter Vin delta (%): ")
-		input, _ = reader.ReadString('\n')
-		input = strings.TrimSuffix(input, check)
-		vinperc, _ = strconv.ParseFloat(input, 64)
+		vinperc = termInput("Enter Vin delta (%): ", reader, check)
 
-		fmt.Print("Enter Vout (V): ")
-		input, _ = reader.ReadString('\n')
-		input = strings.TrimSuffix(input, check)
-		vout, _ = strconv.ParseFloat(input, 64)
+		vout = termInput("Enter Vout (V): ", reader, check)
 
-		fmt.Print("Enter ripple (mV): ")
-		input, _ = reader.ReadString('\n')
-		input = strings.TrimSuffix(input, check)
-		ripple, _ = strconv.ParseFloat(input, 64)
+		ripple = termInput("Enter ripple (mV): ", reader, check)
 		ripple /= 1000
 
-		fmt.Print("Enter Iout (mA): ")
-		input, _ = reader.ReadString('\n')
-		input = strings.TrimSuffix(input, check)
-		i, _ = strconv.ParseFloat(input, 64)
+		i = termInput("Enter Iout (mA): ", reader, check)
 		i /= 1000
 
-		fmt.Print("Enter frequency (KHz): ")
-		input, _ = reader.ReadString('\n')
-		input = strings.TrimSuffix(input, check)
-		frequency, _ = strconv.ParseFloat(input, 64)
+		frequency = termInput("Enter frequency (KHz): ", reader, check)
 		frequency *= 1000
 
-		fmt.Print("Enter forward voltage diode (V): ")
-		input, _ = reader.ReadString('\n')
-		input = strings.TrimSuffix(input, check)
-		vf, _ = strconv.ParseFloat(input, 64)
+		vf = termInput("Enter forward voltage diode (V): ", reader, check)
 
 		vinmin = (vin - (vin * (vinperc / 100)))
 
 		fmt.Println()
 
+		//Check if it should be in boost or buck mode and start the corresponding program
 		if vin > vout {
 			vsat = 1
 			buck()
@@ -73,6 +59,7 @@ func main() {
 			boost()
 		}
 
+		//Loop till the users tells the program to start again or to quit
 		br := false
 		for br == false {
 			br = true
@@ -96,6 +83,7 @@ func main() {
 }
 
 func boost() {
+	//Boost calculations based on the MC34063 datasheet
 	TonToff := (vout + vf - vinmin) / (vinmin - vsat)
 	time := 1 / frequency
 	toff := time / (TonToff + 1)
@@ -123,6 +111,7 @@ func boost() {
 }
 
 func buck() {
+	//Buck calculations based on the MC34063 datasheet
 	TonToff := (vout + vf) / (vinmin - vsat - vout)
 	time := (1 / frequency)
 	toff := time / (TonToff + 1)
@@ -149,6 +138,16 @@ func buck() {
 	fmt.Println("Co:", round(co), "uF")
 }
 
+//Round all values to two decimals
 func round(x float64) float64 {
 	return math.Round(x/.01) * .01
+}
+
+//Parse the input from the terminal from a string to a float
+func termInput(input string, reader *bufio.Reader, check string) float64 {
+	fmt.Print(input)
+	in, _ := reader.ReadString('\n')
+	in = strings.TrimSuffix(in, check)
+	out, _ := strconv.ParseFloat(in, 64)
+	return out
 }
